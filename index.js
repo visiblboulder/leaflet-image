@@ -1,8 +1,27 @@
 /* global L */
 
 var queue = require('d3-queue').queue;
+let createCanvas
+
+try {
+    const canvasPrebuilt = require('canvas-prebuilt')
+    createCanvas = canvasPrebuilt.createCanvas
+} catch (err) {
+    console.log('no "canvas-prebuilt" detected, assuming in browser')
+}
 
 var cacheBusterDate = +new Date();
+
+const buildNewCanvas = (width, height) => {
+    if (typeof process === 'undefined') {
+        const canvas = document.createElement('canvas');
+        canvas.width = width
+        canvas.height = height
+        return canvas
+    } else {
+        return createCanvas(width, height)
+    }
+}
 
 // leaflet-image
 module.exports = function leafletImage(map, callback) {
@@ -12,16 +31,12 @@ module.exports = function leafletImage(map, callback) {
     var dimensions = map.getSize(),
         layerQueue = new queue(1);
 
-    var canvas = document.createElement('canvas');
-    canvas.width = dimensions.x;
-    canvas.height = dimensions.y;
+    var canvas = buildNewCanvas(dimensions.x, dimensions.y)
     var ctx = canvas.getContext('2d');
 
     // dummy canvas image when loadTile get 404 error
     // and layer don't have errorTileUrl
-    var dummycanvas = document.createElement('canvas');
-    dummycanvas.width = 1;
-    dummycanvas.height = 1;
+    var dummycanvas = buildNewCanvas(1, 1)
     var dummyctx = dummycanvas.getContext('2d');
     dummyctx.fillStyle = 'rgba(0,0,0,0)';
     dummyctx.fillRect(0, 0, 1, 1);
@@ -76,10 +91,7 @@ module.exports = function leafletImage(map, callback) {
     function handleTileLayer(layer, callback) {
         // `L.TileLayer.Canvas` was removed in leaflet 1.0
         var isCanvasLayer = (L.TileLayer.Canvas && layer instanceof L.TileLayer.Canvas),
-            canvas = document.createElement('canvas');
-
-        canvas.width = dimensions.x;
-        canvas.height = dimensions.y;
+            canvas = buildNewCanvas(dimensions.x, dimensions.y)
 
         var ctx = canvas.getContext('2d'),
             bounds = map.getPixelBounds(),
@@ -179,9 +191,8 @@ module.exports = function leafletImage(map, callback) {
     function handlePathRoot(root, callback) {
         var bounds = map.getPixelBounds(),
             origin = map.getPixelOrigin(),
-            canvas = document.createElement('canvas');
-        canvas.width = dimensions.x;
-        canvas.height = dimensions.y;
+            canvas = buildNewCanvas(dimensions.x, dimensions.y)
+
         var ctx = canvas.getContext('2d');
         var pos = L.DomUtil.getPosition(root).subtract(bounds.min).add(origin);
         try {
@@ -195,7 +206,7 @@ module.exports = function leafletImage(map, callback) {
     }
 
     function handleMarkerLayer(marker, callback) {
-        var canvas = document.createElement('canvas'),
+        var canvas = buildNewCanvas(dimensions.x, dimensions.y),
             ctx = canvas.getContext('2d'),
             pixelBounds = map.getPixelBounds(),
             minPoint = new L.Point(pixelBounds.min.x, pixelBounds.min.y),
@@ -213,8 +224,6 @@ module.exports = function leafletImage(map, callback) {
         var x = Math.round(pos.x - size[0] + anchor.x),
             y = Math.round(pos.y - anchor.y);
 
-        canvas.width = dimensions.x;
-        canvas.height = dimensions.y;
         im.crossOrigin = '';
 
         im.onload = function () {
@@ -230,9 +239,7 @@ module.exports = function leafletImage(map, callback) {
     }
 
     function handleEsriDymamicLayer(dynamicLayer, callback) {
-        var canvas = document.createElement('canvas');
-        canvas.width = dimensions.x;
-        canvas.height = dimensions.y;
+        var canvas = buildNewCanvas(dimensions.x, dimensions.y)
 
         var ctx = canvas.getContext('2d');
 
